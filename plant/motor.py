@@ -9,6 +9,8 @@ class Motor:
     MAX_POWER_W = 100000.0     # peak power, converted from 134 hp
     BASE_SPEED_RADS = MAX_POWER_W / MAX_TORQUE_NM
     # ^ the motor speed at which peak torque and peak power intersect
+    MAX_REGEN_TORQUE_NM = -150.0  # estimated — regen is typically less than peak drive torque
+
 
     MAX_TEMP_C = 150.0         # thermal shutdown-adjacent limit
     DERATE_START_TEMP_C = 120.0  # torque starts tapering above this
@@ -25,6 +27,16 @@ class Motor:
             base_available = min(self.MAX_TORQUE_NM, power_limited_torque)
 
         return base_available * self.thermal_derate_factor()
+    
+    def min_available_torque(self, speed_rads: float) -> float:
+        """
+        Returns the most negative (braking/regen) torque the motor can
+        produce at a given speed. Simplified: constant regen limit,
+        not speed- or thermally-derated for now.
+        """
+        if speed_rads <= 0:
+            return 0.0  # no regen available at standstill
+        return self.MAX_REGEN_TORQUE_NM
     
     def update_temp(self, torque_nm: float, dt: float) -> None:
         """

@@ -7,6 +7,9 @@ class Battery:
     PACK_CAPACITY_KWH = 15.0       # usable capacity
     NOMINAL_VOLTAGE = 330.0        # V, midpoint of 260-400V operating range
     MAX_DISCHARGE_POWER_KW = 70.0  # estimated — not published by Stellantis
+    MAX_CHARGE_POWER_KW = 30.0  # estimated regen accept limit — not Stellantis-published
+    MAX_REGEN_TORQUE_NM = -150.0  # estimated — regen is typically less than peak drive torque
+
 
     def __init__(self, initial_soc: float = 0.7):
         """
@@ -21,23 +24,28 @@ class Battery:
         """
         Advance the battery state by one timestep.
 
-        power_demand_w: power requested from the battery, in watts.
-                         Positive = discharging (motor drawing power).
+        power_demand_w: positive = discharging (motor drawing power),
+                         negative = charging (regen braking feeding power back).
         dt: timestep duration, in seconds.
 
-        Returns the actual power delivered, in watts (may be less than
-        requested if it exceeds the max discharge power limit).
+        Returns the actual power delivered/absorbed, in watts (same sign
+        convention — may be less in magnitude than requested if it exceeds
+        a limit).
         """
-        max_discharge_w = self.MAX_DISCHARGE_POWER_KW * 1000
-        power_delivered_w = min(power_demand_w, max_discharge_w)
+        if power_demand_w >= 0:
+            max_w = self.MAX_DISCHARGE_POWER_KW * 1000
+            power_actual_w = min(power_demand_w, max_w)
+        else:
+            max_charge_w = self.MAX_CHARGE_POWER_KW * 1000
+            power_actual_w = max(power_demand_w, -max_charge_w)
 
-        current_a = power_delivered_w / self.NOMINAL_VOLTAGE
+        current_a = power_actual_w / self.NOMINAL_VOLTAGE
         charge_used_as = current_a * dt
 
         self.soc -= charge_used_as / self.capacity_as
-        self.soc = max(0.0, min(1.0, self.soc))  # clamp between 0 and 1
+        self.soc = max(0.0, min(1.0, self.soc))
 
-        return power_delivered_w
+        return power_actual_w
 
 
 if __name__ == "__main__":
