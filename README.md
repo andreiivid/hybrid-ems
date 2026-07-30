@@ -101,6 +101,16 @@ python3 sim/load_drive_cycle.py   # parses UDDS data, generates plot
 python3 -m sim.run_sim            # runs full simulation, generates comparison plot
 ```
 
-## Next steps
+## Running the MIL/SIL equivalence test
 
-- Hand-port the controller to C and build a test harness verifying model-in-the-loop (Python) vs. software-in-the-loop (C) output equivalence — mirroring the MIL/SIL verification workflow used in real embedded controls development.
+```bash
+cd controller_c && gcc -o torque_split torque_split.c && ./torque_split && cd ..
+python3 -m test.test_equivalence
+```
+
+## MIL/SIL Verification
+
+The rule-based controller was hand-ported from Python (`controller/torque_split.py`) to C (`controller_c/torque_split.c`) to mirror a real MIL/SIL verification workflow. An automated test (`test/test_equivalence.py`) sweeps 63 combinations of torque demand and SOC through both implementations and confirms outputs match within floating-point tolerance — all 63 cases pass.
+
+
+
