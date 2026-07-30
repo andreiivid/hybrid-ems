@@ -41,19 +41,26 @@ void split_torque(double torque_demand_nm, double soc,
 }
 
 int main() {
-    double engine_t, motor_t;
-    double test_socs[] = {0.70, 0.50, 0.30, 0.25, 0.20, 0.15, 0.10};
-    int n = 7;
-
-    printf("Torque split across SOC range, demand=200 Nm:\n");
-    for (int i = 0; i < n; i++) {
-        split_torque(200.0, test_socs[i], &engine_t, &motor_t);
-        printf("SOC=%.2f | engine=%6.1f Nm | motor=%6.1f Nm\n", test_socs[i], engine_t, motor_t);
+    FILE *f = fopen("sil_output.csv", "w");
+    if (f == NULL) {
+        printf("Failed to open output file\n");
+        return 1;
     }
 
-    printf("\nRegen braking test, demand=-100 Nm, SOC=0.5:\n");
-    split_torque(-100.0, 0.5, &engine_t, &motor_t);
-    printf("engine=%.1f Nm | motor=%.1f Nm\n", engine_t, motor_t);
+    fprintf(f, "torque_demand_nm,soc,engine_torque_nm,motor_torque_nm\n");
 
+    double torque_demands[] = {-150.0, -50.0, 0.0, 50.0, 100.0, 200.0, 300.0};
+    double socs[] = {0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.60, 0.80};
+
+    double engine_t, motor_t;
+    for (int i = 0; i < 7; i++) {
+        for (int j = 0; j < 9; j++) {
+            split_torque(torque_demands[i], socs[j], &engine_t, &motor_t);
+            fprintf(f, "%.4f,%.4f,%.6f,%.6f\n", torque_demands[i], socs[j], engine_t, motor_t);
+        }
+    }
+
+    fclose(f);
+    printf("Wrote sil_output.csv\n");
     return 0;
 }
